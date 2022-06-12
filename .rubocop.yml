@@ -1,0 +1,48 @@
+require:
+  - rubocop-performance
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  TargetRubyVersion: 2.7
+
+# ================ LAYOUT ==============
+Layout/LineLength:
+  Max: 150
+
+# ================ LINT ================
+Lint/AmbiguousBlockAssociation:
+  Exclude:
+    - spec/**/*_spec.rb
+
+Lint/EmptyClass:
+  Exclude:
+    - spec/**/*_spec.rb
+
+# ================ Metics ================
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*_spec.rb
+    - snfoil-jsonapi.gemspec
+
+# ================ RSPEC ================
+
+RSpec/FilePath:
+  CustomTransform:
+    SnFoil: snfoil
+    JSONAPI: jsonapi
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Max: 5
+
+# ================ STYLE ================
+Style/OpenStructUse:
+  Exclude:
+    - spec/**/*.rb
