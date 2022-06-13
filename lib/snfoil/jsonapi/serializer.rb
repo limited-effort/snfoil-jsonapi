@@ -24,7 +24,38 @@ module SnFoil
   # @since 0.1.0
   module JSONAPI
     module Serializer
-        extend ActiveSupport::Concern
+      extend ActiveSupport::Concern
+
+      class_methods do
+        attr_reader :snfoil_transforms
+
+        def attribute(key, **options,&block)
+          @snfoil_transforms ||= []
+          @snfoil_transforms << {
+            key: key,
+            param: options[:param],
+            block: block
+          }
+        end
+
+        def attributes(*keys)
+          keys.each { attribute(key) }
+        end
+      end
+
+      def serialize(object)
+        if object.is_a? Enumerable
+
+        else
+
+        end
+      end
+
+      private
+
+      def serialize_object(object)
+        
+      end
     end
   end
 end
