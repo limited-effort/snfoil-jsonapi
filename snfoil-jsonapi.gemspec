@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
-require_relative 'lib/snfoil/policy/version'
+require_relative 'lib/snfoil/jsonapi/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'snfoil-policy'
-  spec.version       = SnFoil::Policy::VERSION
-  spec.authors       = ['Matthew Howes', 'Cliff Campbell']
-  spec.email         = ['howeszy@gmail.com', 'cliffcampbell@hey.com']
+  spec.name          = 'snfoil-jsonapi'
+  spec.version       = SnFoil::JSONAPI::VERSION
+  spec.authors       = ['Matthew Howes']
+  spec.email         = ['howeszy@gmail.com']
 
-  spec.summary       = 'Pundit Style Permissions Builder'
-  spec.description   = 'A set of helper functions to build permission files inspired by Pundit.'
-  spec.homepage      = 'https://github.com/limited-effort/snfoil-policy'
+  spec.summary       = ''
+  spec.description   = ''
+  spec.homepage      = 'https://github.com/limited-effort/snfoil-jsonapi'
   spec.license       = 'Apache-2.0'
   spec.required_ruby_version = '>= 2.7'
 
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = spec.homepage
-  spec.metadata['changelog_uri'] = 'https://github.com/limited-effort/snfoil-policy/blob/main/CHANGELOG.md'
+  spec.metadata['changelog_uri'] = 'https://github.com/limited-effort/snfoil-jsonapi/blob/main/CHANGELOG.md'
   spec.metadata['rubygems_mfa_required'] = 'true'
 
   # Specify which files should be added to the gem when it is released.
@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'activesupport', '>= 5.2.6'
+  spec.add_dependency 'activesupport', '>= 6.1.0'
 
   spec.add_development_dependency 'bundle-audit', '~> 0.1.0'
   spec.add_development_dependency 'fasterer', '~> 0.10.0'

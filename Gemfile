@@ -2,5 +2,5 @@
 
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in snfoil-policy.gemspec
+# Specify your gem's dependencies in snfoil-jsonapi.gemspec
 gemspec
