@@ -7,11 +7,13 @@ require 'shared_contexts/full_item'
 require 'shared_contexts/additional_items'
 
 RSpec.describe SnFoil::JSONAPI::Serializer do
-  subject(:serializer) { AnimalSerializer.new(*target) }
+  subject(:serializer) { serializer_class.new(*target, **options) }
 
   include_context 'with a full item'
 
+  let(:serializer_class) { AnimalSerializer }
   let(:target) { penguin }
+  let(:options) { {} }
 
   describe 'self#type' do
     it 'sets the snfoil_type for the class' do
@@ -25,6 +27,23 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
     it 'sets the snfoil_id for the class' do
       overriden_class.id :uuid
       expect(overriden_class.snfoil_id).to eq(:uuid)
+    end
+  end
+
+  describe '#self.render_relationships' do
+    let(:serializer_class) { AnimalSerializer.clone }
+
+    it 'sets the snfoil_render_relationships for the class' do
+      serializer_class.render_relationships :partial
+      expect(serializer_class.snfoil_render_relationships).to eq(:partial)
+    end
+
+    context 'when the value sent is not in the approved list' do
+      it 'raises an error' do
+        expect do
+          serializer_class.render_relationships :pickle
+        end.to raise_error SnFoil::JSONAPI::Serializer::Error
+      end
     end
   end
 
@@ -64,6 +83,26 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
     end
   end
 
+  describe 'self#has_one' do
+    it 'adds the relationship to the snfoil_tranforms' do
+      expect(AnimalSerializer.snfoil_tranforms.map { |att| att[:param] }).to include(:reference)
+    end
+
+    it 'applies a type of :has_one in the transform config' do
+      expect(AnimalSerializer.snfoil_tranforms.find { |att| att[:param] == :reference }[:type]).to eq :has_one
+    end
+
+    context 'when defined without a serializer argument' do
+      let(:overriden_class) { AnimalSerializer.clone }
+
+      it 'raises an error' do
+        expect do
+          overriden_class.has_one :fake_relationship
+        end.to raise_error SnFoil::JSONAPI::Serializer::Error
+      end
+    end
+  end
+
   describe 'self#has_many' do
     it 'adds the relationship to the snfoil_tranforms' do
       expect(AnimalSerializer.snfoil_tranforms.map { |att| att[:param] }).to include(:inventory_items)
@@ -93,6 +132,19 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
     end
   end
 
+  describe '#new' do
+    let(:options) { { test: true } }
+
+    it 'sets the objects' do
+      expect(serializer.objects.length).to eq 1
+      expect(serializer.objects).to include penguin
+    end
+
+    it 'sets the options' do
+      expect(serializer.options).to eq options
+    end
+  end
+
   describe '#serializable_hash' do
     context 'when there is only one model' do
       it 'returns data as an hash' do
@@ -116,48 +168,46 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
         expect(serializer.serializable_hash).to be_nil
       end
     end
-  end
 
-  describe '#parse_object' do
     it 'sets the type' do
-      expect(serializer.parse_object(penguin)[:type]).to eq :animals
+      binding.pry
+      expect(serializer.serializable_hash[:data][:type]).to eq :animals
     end
 
     it 'includes the associated attributes as a hash' do
-      expect(serializer.parse_object(penguin)[:attributes]).to be_a Hash
+      expect(serializer.serializable_hash[:data][:attributes]).to be_a Hash
     end
 
     it 'includes the values of the model in the attributes' do
-      expect(serializer.parse_object(penguin)[:attributes][:name]).to be 'penguin'
+      expect(serializer.serializable_hash[:data][:attributes][:name]).to be 'penguin'
     end
 
     context 'when a key transform is explicitly set' do
-      let(:overriden_class) { AnimalSerializer.clone }
+      let(:serializer_class) { AnimalSerializer.clone }
 
       it 'tranforms the keys based on the tranform type' do
-        overriden_class.key_transform :dasherize
-        output = overriden_class.new.parse_object(penguin)
-        expect(output[:attributes].key?(:'opposable-thumb')).to be true
-        expect(output[:attributes].key?(:opposable_thumb)).to be false
+        serializer_class.key_transform :dasherize
+        expect(serializer.serializable_hash[:data][:attributes].key?(:'opposable-thumb')).to be true
+        expect(serializer.serializable_hash[:data][:attributes].key?(:opposable_thumb)).to be false
       end
     end
 
     context 'when a key tranform isn\'t explicitly set' do
       it 'defaults to the param' do
-        expect(serializer.parse_object(penguin)[:attributes].key?(:opposable_thumb)).to be true
+        expect(serializer.serializable_hash[:data][:attributes].key?(:opposable_thumb)).to be true
       end
     end
 
     context 'when an attribute is assigned' do
       context 'when it is configured with a key' do
         it 'returns the key with nil' do
-          expect(serializer.parse_object(penguin)[:attributes][:cola]).to be true
+          expect(serializer.serializable_hash[:data][:attributes][:cola]).to be true
         end
       end
 
       context 'when it doesn\'t exist on the model' do
         it 'returns the key with nil' do
-          expect(serializer.parse_object(penguin)[:attributes][:eyes]).to be_nil
+          expect(serializer.serializable_hash[:data][:attributes][:eyes]).to be_nil
         end
       end
 
@@ -165,7 +215,7 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
         before { allow(penguin).to receive(:find_method_one).and_call_original }
 
         it 'calls the method with the object to get the value' do
-          expect(serializer.parse_object(penguin)[:attributes][:method]).to eq penguin.find_method_one
+          expect(serializer.serializable_hash[:data][:attributes][:method]).to eq penguin.find_method_one
           expect(penguin).to have_received(:find_method_one).twice # one call for expect and one for serializer
         end
       end
@@ -174,7 +224,7 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
         before { allow(penguin).to receive(:stubbable_one).and_call_original }
 
         it 'calls the block with the object to get the value' do
-          expect(serializer.parse_object(penguin)[:attributes][:block]).to eq penguin.stubbable_one
+          expect(serializer.serializable_hash[:data][:attributes][:block]).to eq penguin.stubbable_one
           expect(penguin).to have_received(:stubbable_one).twice # one call for expect and one for serializer
         end
       end
@@ -186,39 +236,87 @@ RSpec.describe SnFoil::JSONAPI::Serializer do
         end
 
         it 'calls the method with the object to get the value' do
-          expect(serializer.parse_object(penguin)[:attributes][:method_block]).to eq penguin.find_method_two
+          expect(serializer.serializable_hash[:data][:attributes][:method_block]).to eq penguin.find_method_two
           expect(penguin).to have_received(:find_method_two).twice # one call for expect and one for serializer
           expect(penguin).not_to have_received(:stubbable_two)
         end
       end
     end
 
-    context 'when a belongs_to relationship is assigned' do
-
-    end
-
-    context 'when a has_many relationship is assigned' do
-    end
-
     context 'when id is explicitly set' do
-      let(:overriden_class) { AnimalSerializer.clone }
+      let(:serializer_class) { AnimalSerializer.clone }
 
       it 'sets id to the configuration' do
-        overriden_class.id :alt_id
-        expect(overriden_class.new.parse_object(penguin)[:id]).to eq 'boogins'
+        serializer_class.id :alt_id
+        expect(serializer.serializable_hash[:data][:id]).to eq 'boogins'
       end
     end
 
     context 'when id isn\'t explicitly set' do
       it 'sets id to :id' do
-        expect(serializer.parse_object(penguin)[:id]).to eq 1
+        expect(serializer.serializable_hash[:data][:id]).to eq 1
       end
     end
   end
+
+  # describe '#parse_object' do
+
+  #   context 'when a belongs_to relationship is assigned' do
+  #     context 'when render_relationships is :none' do
+  #     end
+
+  #     context 'when render_relationships is :included' do
+  #     end
+
+  #     context 'when render_relationships is :partial' do
+  #     end
+
+  #     context 'when render_relationships is :full' do
+  #     end
+  #   end
+
+  #   context 'when a has_one relationship is assigned' do
+  #     context 'when render_relationships is :none' do
+  #     end
+
+  #     context 'when render_relationships is :included' do
+  #     end
+
+  #     context 'when render_relationships is :partial' do
+  #     end
+
+  #     context 'when render_relationships is :full' do
+  #     end
+  #   end
+
+  #   context 'when a has_many relationship is assigned' do
+  #     context 'when render_relationships is :none' do
+  #     end
+
+  #     context 'when render_relationships is :included' do
+  #     end
+
+  #     context 'when render_relationships is :partial' do
+  #     end
+
+  #     context 'when render_relationships is :full' do
+  #     end
+  #   end
+  # end
+end
+
+class ReferenceSerializer
+  include SnFoil::JSONAPI::Serializer
+
+  type :references
+
+  attributes :description
 end
 
 class AttackSerializer
   include SnFoil::JSONAPI::Serializer
+
+  type :attacks
 
   attributes :name, :damage
 end
@@ -226,13 +324,18 @@ end
 class InventoryItemSerializer
   include SnFoil::JSONAPI::Serializer
 
+  type :inventory_items
+
   attributes :item
+
+  belongs_to :reference, serializer: ReferenceSerializer
 end
 
 class AnimalSerializer
   prepend SnFoil::JSONAPI::Serializer
 
   type :animals
+  render_relationships :none
 
   attributes :tail, :claws, :opposable_thumb
   attribute :name
@@ -243,6 +346,8 @@ class AnimalSerializer
   attribute(:method_block, with: :find_method_two, &:stubbable_two)
 
   belongs_to :main_attack, serializer: AttackSerializer
+  belongs_to :reference, serializer: ReferenceSerializer
+  has_one :equipped_item, serializer: InventoryItemSerializer
   has_many(:inventory_items, serializer: InventoryItemSerializer, &:inventory)
 
   def find_method_one(obj)

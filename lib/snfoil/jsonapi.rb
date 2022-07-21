@@ -17,7 +17,7 @@
 require 'active_support/concern'
 
 module SnFoil
-  # 
+  #
   #
   # @author Matthew Howes
   #
